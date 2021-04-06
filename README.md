@@ -22,7 +22,7 @@ Also my project requirements are to post the data to a shared memory location /d
 
 I validated the gyro angular velocity reported via  report id 0x2A by fixing the BNO085 gyro to a turn table along with a Witmotion gyro. The results are shown here.   
 
-![Gyro Traces](/docs/bno_wit_gyro_traces.jpg)
+![Gyro Traces](/docs/bno085_witmotion_gyro_traces.jpg)
 
 Gyro1 trace is the BNO085 (actually FSM305) and Gyro2 trace is the Witmotion HWT905
 
