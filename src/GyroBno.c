@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 	// 5000 -> 200 hz
 	// 2500 -> 400
 	// 1250 -> 800
-	bno_set_feature(0x2A,1250);
+	bno_set_feature(0x2A,5000);
 
 	int cnt=0; 
 	//clock_gettime(CLOCK_MONOTONIC, &t1);
@@ -71,9 +71,9 @@ int main(int argc, char **argv) {
 
 		uint8_t rtn = bno_read_event(mstate_ptr);
 
-		if ( cnt % 100 == 0  ) {
-			printf("%7.2f %7.2f %7.2f : ",mstate_ptr->angle[0], mstate_ptr->angle[1], mstate_ptr->angle[2]);
-			printf("%7.2f %7.2f %7.2f",mstate_ptr->omega[0], mstate_ptr->omega[1], mstate_ptr->omega[2]);
+		if ( cnt++ % 100 == 0  ) {
+			printf("%7.4f %7.4f %7.4f : ",mstate_ptr->angle[0], mstate_ptr->angle[1], mstate_ptr->angle[2]);
+			printf("%7.4f %7.4f %7.4f",mstate_ptr->omega[0], mstate_ptr->omega[1], mstate_ptr->omega[2]);
 			printf("\n");
 			//printf("%5.2f %5.2f %5.2f %5.2f\n",mstate.quat[0],mstate.quat[1],mstate.quat[2],mstate.quat[3]);
 		}
