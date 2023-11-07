@@ -16,6 +16,7 @@ void * open_shm(char * shmfile, unsigned int memsize ) {
 
 	shmfd = open(shmfile, O_RDWR | O_CREAT, 0660);
   	if ( shmfd < 0 )  {
+		perror(shmfile);
 		PrintErr("Shared Memory Open failed...");
 		exit(-1);
 	}

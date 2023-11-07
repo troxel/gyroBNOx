@@ -10,7 +10,7 @@ struct State_t {
 	long ts; 
 };
 
-uint8_t shtpHeaderRcv[4]; 
-uint8_t shtpDataRcv[256]; 
+//uint8_t shtpHeaderRcv[4]; 
+//uint8_t shtpDataRcv[256]; 
 
 #endif /* MSTATE_H */

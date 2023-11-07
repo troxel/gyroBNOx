@@ -115,8 +115,8 @@ struct bno_gra_t{
 void  intHandler(int sig);
 
 // Public Function pointers access point (associations in apiBno.c) 
-uint8_t (*bno_open)();
-void (*bno_close)();
+//uint8_t (*bno_open)();
+//void (*bno_close)();
 
 void bno_init(uint8_t method);
 uint8_t bno_reset();

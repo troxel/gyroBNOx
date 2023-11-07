@@ -45,7 +45,7 @@ uint8_t sequence[6]; // 6 SHTP channels. Each channel has its own seqnum
 // > 10 words in a metadata, but we'll stop at Q point 3
 unsigned int metaData[MAX_METADATA_SIZE];
 
-uint8_t verbose = 0; 
+extern uint8_t verbose; 
 
 // Open details for i2c
 struct Gyro_Open_t i2c_port;
@@ -77,6 +77,9 @@ uint16_t bno_readPacket(void);
 uint8_t (*send_data)(uint8_t *,uint16_t);
 uint16_t (*read_data)(uint8_t *,uint16_t);
 
+extern uint8_t (*bno_open)();
+extern void (*bno_close)();
+
 // Util functions...
 uint8_t quat2euler(double * qt, double * angles);
 
@@ -90,6 +93,7 @@ void bno_init(uint8_t method) {
       read_data = read_i2c_bcm;
       bno_open = open_i2c_bcm;
       bno_close = close_i2c_bcm; 
+
    }
    else if ( method == USEI2CDEV ) {
       send_data = send_i2c_dev;
@@ -116,7 +120,7 @@ uint8_t open_i2c_dev() {
 		printf("Error failed to open I2C bus [%s] %s\n", i2c_port.dev, strerror(errno) );
 		exit(1);
 	}
-    if(verbose == 1) printf("Debug: I2C bus device: %d [%s]\n", i2c_port.fd, i2c_port.dev);
+    if(verbose >= 1) printf("Debug: I2C bus device: %d [%s]\n", i2c_port.fd, i2c_port.dev);
    
  	if (ioctl(i2c_port.fd, I2C_SLAVE, i2c_port.addr) < 0) {
 		printf("Error with I2C address [0x%02X] %s\n", i2c_port.addr, strerror(errno) );
@@ -156,7 +160,7 @@ uint8_t open_i2c_bcm() {
 
    bcm2835_i2c_setSlaveAddress(i2c_port.addr);
 
-   if(verbose == 1) printf("Debug: I2C bus address: %02X\n", i2c_port.addr);
+   if(verbose >= 1) printf("Debug: I2C bus address: %02X\n", i2c_port.addr);
 
    return(1);
 	
@@ -220,6 +224,16 @@ uint16_t bno_readPacket(void) {
 
       // ------------------------------
       rbytes = read_data(shtpHeader, 4);
+
+      printf("Read header %u %u %u %u\n",shtpHeader[0],shtpHeader[1],shtpHeader[2],shtpHeader[3]);
+
+
+      if ( rbytes == 65535 ){
+         printf("rbytes %d\n",rbytes);
+         printf("%u %u %u %u\n",shtpHeader[0],shtpHeader[1],shtpHeader[2],shtpHeader[3]);
+         sleep(1);
+         break;
+      }
 
       if ( rbytes == -1 ) {
          usleep(5000);
@@ -412,7 +426,11 @@ uint8_t bno_set_feature(uint8_t r_id,int period_usec) {
    usleep(550000);                   // Needs a lot of time to get back... 
 
    uint16_t rtn = bno_readPacket();
-   if ( rtn <= 0 ) { return 0; }
+   if ( rtn <= 0 ) { 
+      printf("Set Feature failed %s\n",strerror(errno)); 
+		bno_close();
+      exit(1);
+	}
 
    return(1);
 
@@ -580,7 +598,7 @@ uint8_t send_i2c_bcm(uint8_t *data,uint16_t data_len){
    uint8_t rcode = bcm2835_i2c_write((char *)data,data_len);
 
    if ( rcode != BCM2835_I2C_REASON_OK ) {
-      if ( rcode == BCM2835_I2C_REASON_ERROR_NACK) perror("Received a NACK");
+      if ( rcode == BCM2835_I2C_REASON_ERROR_NACK) perror("Received a NACK on send");
       if ( rcode == BCM2835_I2C_REASON_ERROR_CLKT) perror("Received Clock Stretch Timeout");
       if ( rcode == BCM2835_I2C_REASON_ERROR_DATA) perror("Not all data received");
       return(-1);
@@ -608,7 +626,7 @@ uint16_t read_i2c_bcm(uint8_t *data,uint16_t data_len){
    int rcode = bcm2835_i2c_read((char *)data, data_len);
 
    if ( rcode != BCM2835_I2C_REASON_OK ) {
-      if ( rcode == BCM2835_I2C_REASON_ERROR_NACK) perror("Received a NACK");
+      if ( rcode == BCM2835_I2C_REASON_ERROR_NACK) perror("Received a NACK on read");
       if ( rcode == BCM2835_I2C_REASON_ERROR_CLKT) perror("Received Clock Stretch Timeout");
       if ( rcode == BCM2835_I2C_REASON_ERROR_DATA) perror("Not all data received");
       return(-1);
