@@ -29,7 +29,7 @@ void intHandler(int sig);
 
 uint8_t (*bno_open)() = NULL;
 void (*bno_close)() = NULL;
-uint8_t verbose = 2;
+uint8_t verbose = 0;
 
 // -----------------------------------------------
 int main(int argc, char **argv) {
@@ -44,8 +44,8 @@ int main(int argc, char **argv) {
 
 	printf("start\n");
 	
-	bno_init(USEI2CBCM); // Select comm method... uses function pointers 
-	//bno_init(USEI2CDEV);
+	//bno_init(USEI2CBCM); // Select comm method... uses function pointers 
+	bno_init(USEI2CDEV);
 
    uint8_t open_rtn = bno_open();
    if ( open_rtn <= 0 ) { 

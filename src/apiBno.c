@@ -225,9 +225,6 @@ uint16_t bno_readPacket(void) {
       // ------------------------------
       rbytes = read_data(shtpHeader, 4);
 
-      printf("Read header %u %u %u %u\n",shtpHeader[0],shtpHeader[1],shtpHeader[2],shtpHeader[3]);
-
-
       if ( rbytes == 65535 ){
          printf("rbytes %d\n",rbytes);
          printf("%u %u %u %u\n",shtpHeader[0],shtpHeader[1],shtpHeader[2],shtpHeader[3]);
@@ -639,7 +636,7 @@ uint16_t read_i2c_bcm(uint8_t *data,uint16_t data_len){
 //--------------------------------------------
 uint16_t read_i2c_dev(uint8_t *data,uint16_t data_len){
 
-   int rtn = read(i2c_port.fd, shtpHeader, data_len);
+   int rtn = read(i2c_port.fd, data, data_len);
 
    if( rtn != data_len ) {
       printf("Error: Read failed on %d tried to send %d only %d bytes sent %s\n", i2c_port.fd,data_len,rtn,strerror(errno));
