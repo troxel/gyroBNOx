@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 // I2C Specifications ----
-#define I2CPORT "/dev/i2c-1"
+#define I2CPORT "/dev/i2c-3grep "
 #define I2CADDR 0x4A
 #define I2CXSPEED 100000
 // ------------------------------
@@ -73,9 +73,10 @@
 #define REPORTID_IGR 0x2a // Integrated Gyro/Rotation
 
 // Hardware selection method
-#define USEI2CBCM 0x1
-#define USEI2CDEV 0x2
+// #define USEI2CBCM 0x1
+// #define USEI2CDEV 0x2
 
+#define MAX_INPUT_LENGTH 15
 
 struct Gyro_Open_t {
     char *dev;
@@ -118,10 +119,13 @@ void  intHandler(int sig);
 //uint8_t (*bno_open)();
 //void (*bno_close)();
 
-void bno_init(uint8_t method);
+void bno_init(char *dev_i2c);
 uint8_t bno_reset();
 uint8_t bno_errors();
 uint8_t	bno_set_feature(uint8_t r_id,int period_usec);
-uint8_t bno_read_event(struct State_t * state_p);
+uint8_t bno_read_event(struct State_t * state_p, uint8_t dsp_flg);
+
+void disp_rpy_omega(struct State_t * state_p);
+
 
 #endif 

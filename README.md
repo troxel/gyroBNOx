@@ -1,8 +1,8 @@
 # gyroBNOx
-A C linux interface to the Ceva BNO080 BNO083 FSM300 FSM305 motion IMU devices. 
+A C linux interface to the Ceva BNO08x FSM300 FSM305 motion IMU devices. 
 
 # gyroWitMotion
-A C based console program to setup and read data from a CEVA Hillcrest Bosch IMU Gyro devices. Specifically this has been tested with the BNO085 and FSM305 but I suspect will work with other similar Ceva/Hillcrest Motion devices. This program is targed to run on the Raspberry Pi and tested with a model 4. This program has been written to support I2C interface using the BCM2835 and also the /dev/i2c-1 device. There is a hardware abstraction layer in the apiBNO.c file so if you wanted add SPI or UART it should be pretty straight forwar - just generated specific open,send,read,close functions and align the function pointers in a section of code towards the top as:
+A C based console program to setup and read data from a CEVA Hillcrest Bosch IMU Gyro devices. Specifically this has been tested with the BNO085 and FSM305 but I suspect will work with other similar Ceva/Hillcrest Motion devices. This program is targed to run on the Raspberry Pi and tested with a model 4. This program has been written to support I2C interface using the BCM2835 library, the /dev/i2c-1 device, and the /devi2c-3 (gpio interface). There is a hardware abstraction layer in the apiBNO.c file so if you wanted add SPI or UART it should be pretty straight forward - just generated specific open,send,read,close functions and align the function pointers in a section of code towards the top as:
 
   send_data = send_i2c_bcm;  
   read_data = read_i2c_bcm;  
@@ -16,11 +16,14 @@ Also my project requirements are to post the data to a shared memory location /d
 # Synopsis
 
 > ./bin/gyroBNOx
+> ./bin/GyroBno.exe [-d i2c-device] [-f feature-set-hex] 
+-d : Must be either bcm2835 or existing i2c device in /dev
+-f : Feature set hex number of ST-2 manual.
 
 
 # Validation
 
-I validated the gyro angular velocity reported via  report id 0x2A by fixing the BNO085 gyro to a turn table along with a Witmotion gyro. The results are shown here.   
+I validated the gyro angular velocity reported via  report id 0x2A by fixing the BNO08x gyro to a turn table along with a Witmotion gyro. The results are shown here.   
 
 ![Gyro Traces](/docs/bno085_witmotion_gyro_traces.png)
 
@@ -36,3 +39,5 @@ Note while evaluating the BNO Ceva Hillcrest with the Witmotion device I found a
 https://github.com/troxel/gyroWitMotion  
 
 I used bits and pieces of code I found various places on the web and there is some global data used in the api since the code I borrowed was being used on a MCU vice on a Raspberry PI. I may go back and clean this up when I get time.  
+
+https://os.mbed.com/users/MultipleMonomials/code/BNO080//file/430f5302f9e1/BNO080.cpp/

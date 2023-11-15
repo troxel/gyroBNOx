@@ -85,35 +85,39 @@ uint8_t quat2euler(double * qt, double * angles);
 
 // -----------------------------------------------------
 // Hardware abstraction
-void bno_init(uint8_t method) {
+void bno_init(char *dev_i2c) {
 
-   if ( method == USEI2CBCM ) {
-
+   if ( strstr(dev_i2c,"bcm2835") != NULL ) {
+      // User broadcomm 2835 library for i2c comms    
       send_data = send_i2c_bcm;
       read_data = read_i2c_bcm;
       bno_open = open_i2c_bcm;
       bno_close = close_i2c_bcm; 
-
+      printf("Using Broadcomm2835 Library for i2c comms\n");   
    }
-   else if ( method == USEI2CDEV ) {
+   else if ( strstr(dev_i2c,"i2c") != NULL ) {
+      // ic2 but check for existence of file 
+      if (access(dev_i2c, F_OK) == -1) {
+         perror("Error! I2C Device does not exist");
+         exit(EXIT_FAILURE);
+      }
+
       send_data = send_i2c_dev;
       read_data = read_i2c_dev;
       bno_open = open_i2c_dev;
       bno_close = close_i2c_dev; 
-   } 
-   else {
-      printf("Error: Unrecognized Hardware communication method provided\n");
-      exit(-1);
+      i2c_port.dev = dev_i2c; // For use in open_i2c_dev()
+      printf("Using \'%s\' for i2c comms\n\n",dev_i2c);   
    }
-   // Add SPI and UART someday 
+   // Add SPI and UART if needed.  
 }   
 
 
 // -----------------------------------------------------
 uint8_t open_i2c_dev() {
 
-   i2c_port.dev = I2CPORT;
-	i2c_port.addr = I2CADDR;
+   // i2c_port.dev is set in bno_init() 
+ 	i2c_port.addr = I2CADDR;
 	i2c_port.xspeed = I2CXSPEED;
  
 	if(( i2c_port.fd = open(i2c_port.dev, O_RDWR )) < 0) {
@@ -123,7 +127,7 @@ uint8_t open_i2c_dev() {
     if(verbose >= 1) printf("Debug: I2C bus device: %d [%s]\n", i2c_port.fd, i2c_port.dev);
    
  	if (ioctl(i2c_port.fd, I2C_SLAVE, i2c_port.addr) < 0) {
-		printf("Error with I2C address [0x%02X] %s\n", i2c_port.addr, strerror(errno) );
+		printf("Error! with I2C address [0x%02X] %s\n", i2c_port.addr, strerror(errno) );
 		exit(1);
 	}
 
@@ -227,9 +231,9 @@ uint16_t bno_readPacket(void) {
 
       if ( rbytes == 65535 ){
          printf("rbytes %d\n",rbytes);
-         printf("%u %u %u %u\n",shtpHeader[0],shtpHeader[1],shtpHeader[2],shtpHeader[3]);
-         sleep(1);
-         break;
+         printf("%X %X %X %X\n",shtpHeader[0],shtpHeader[1],shtpHeader[2],shtpHeader[3]);
+         usleep(I2CDELAY);
+         continue;
       }
 
       if ( rbytes == -1 ) {
@@ -248,7 +252,7 @@ uint16_t bno_readPacket(void) {
          // Adjust the sleep duration depending on the acquisition time period. Making it about .8 of the
          // fastest report id seems to work best. 
          if ( shtpHeader[0] == 0 ) {
-            usleep(1000 * cnt );  // grow wait time with each iteration to reduce cpu utilization
+            usleep(1000 );  // grow wait time with each iteration to reduce cpu utilization
            
             cnt++;
             continue;         
@@ -274,7 +278,12 @@ uint16_t bno_readPacket(void) {
    
    // Check if the subtransfer bit was set (shtpHeader[1] MSB)
    if(shtpHeader[1]&0x80) subtransfer = 1;
-  
+
+   // Found instances of noise rqst large packets. 
+   if( packetlen > 512 ) {
+      return(0);
+   }
+
    uint8_t data[packetlen];    // Buffer for entire packet
 
    // --------------------------------
@@ -468,7 +477,7 @@ uint8_t bno_set_feature(uint8_t r_id,int period_usec) {
  *    *
  *    *
  * ------------------------------------------------------------ */
-uint8_t bno_read_event(struct State_t * state_p) {
+uint8_t bno_read_event(struct State_t * state_p, uint8_t dsp_flg) {
 
    uint16_t rtn = bno_readPacket();
    if ( rtn <= 0 ) return 0; 
@@ -481,11 +490,38 @@ uint8_t bno_read_event(struct State_t * state_p) {
    // This report is identifed if the channel in the header is set to 0x05
    // See 1.3.1 SHTP in BNO085 Data Sheet
 
-
 	// The gyro-integrated input report is an odd ball require special handling. 
    // They are identified via the special gyro channel and do no include the 
    // usual ID, time stampe and status fields.
+
    // I hate special cases :(
+
+   /* Overview of SHTP channels return in header shipHeader[2]:
+   *
+   * 0 -> Command
+   * -- Used for protocol-global packets, currently only the advertisement packet (which lists all the channels) and error reports
+   *
+   * 1 -> Executable
+   * -- Used for things that control the software on the chip: commands to reset and sleep
+   * -- Also used by the chip to report when it's done booting up
+   *
+   * 2 -> Control
+   * -- Used to send configuration commands to the IMU and for it to send back responses.
+   * -- Common report IDs: Command Request (0xF2), Set Feature (0xFD)
+   *
+   * 3 -> Sensor Reports
+   * -- Used for sensors to send back data reports.
+   * -- AFAIK the only report ID on this channel will be 0xFB (Report Base Timestamp); sensor data is sent in a series of structures
+   *    following an 0xFB
+   *
+   * 4 -> Wake Sensor/Normal Reports
+   * -- same as above, but for sensors configured to wake the device
+   *
+   * 5 -> Gyro Rotation Vector
+   * -- a dedicated channel for the Gyro Rotation Vector sensor report
+   * -- Why does this get its own channel?  
+   */
+
    if (shtpHeader[2] == 0x05 ) {
            
       // Give expected results... -----------------------------------------------
@@ -497,6 +533,8 @@ uint8_t bno_read_event(struct State_t * state_p) {
     	state_p->omega[0] = (double)(int16_t)(shtpData[9] << 8  | shtpData[8]) * qp10 * rad2deg;
 		state_p->omega[1] = (double)(int16_t)(shtpData[11] << 8 | shtpData[10]) * qp10 * rad2deg;
 		state_p->omega[2] = (double)(int16_t)(shtpData[13] << 8 | shtpData[12]) * qp10 * rad2deg;
+
+      state_p->fs = 0x2A;
       //--------------------------------------------------------------------------------------
 
 
@@ -516,14 +554,13 @@ uint8_t bno_read_event(struct State_t * state_p) {
 
       quat2euler( state_p->quat, state_p->angle );
 
+      if ( dsp_flg ) disp_rpy_omega(state_p);
+
       return 1; 
+   } 
 
-   }
-
-   // Return for now. Remove and add code if other report id are required. Send patches.
-   return(0);
-
-   // The other reports are structured as: 
+   // The other reports are structured as follows using report id 0x01: 
+   //
    //shtpHeader[0:3]: A 4 byte header containing packet length, subtransfer bit, channel
    //shtpData[0:4]: A 5 byte timestamp of microsecond since reading was taken
    //shtpData[5 + 0]: A feature report ID (0x01 for Accel, 0x05 for Rotation Vector)
@@ -535,18 +572,31 @@ uint8_t bno_read_event(struct State_t * state_p) {
    //shtpData[8:9]: z/accel z/gyro z/etc
    //shtpData[10:11]: real/gyro temp/etc
    //shtpData[12:13]: Accuracy estimate
+   // --------------------------------
+   // Depending on the request rate one read can have two samples
+   // size of report SIZE
+   // --------------------------------
+   //shtpData[SIZE + 0]: A feature report ID (0x01 for Accel, 0x05 for Rotation Vector)
+   //shtpData[SIZE + 1]: Sequence number (See 6.5.18.2)
+   //shtpData[SIZE + 2]: Status
+   //shtpData[SIZE + 3]: Delay
+   //shtpData[SIZE + 4:5]: x/accel x/gyro x/etc
+   //shtpData[SIZE + 6:7]: y/accel y/gyro y/etc
+   //shtpData[SIZE + 8:9]: z/accel z/gyro z/etc
+   //shtpData[SIZE + 10:11]: real/gyro temp/etc
+   //shtpData[SIZE + 12:13]: Accuracy estimate
 
-	int16_t dataLength = ((uint16_t)shtpHeader[1] << 8 | shtpHeader[0]);
+   int16_t dataLength = ((uint16_t)shtpHeader[1] << 8 | shtpHeader[0]);
 	dataLength &= ~(1 << 15); //Clear the MSbit. This bit indicates if this package is a continuation of the last.
 
 	state_p->ts = ((uint32_t)shtpData[4] << 24) | ((uint32_t)shtpData[3] << 16) | ((uint32_t)shtpData[2] << 8) | ((uint32_t)shtpData[1] );
 
-	
-	//uint8_t status = shtpData[5 + 2] & 0x03; //Get status bits comment as not used yet
+   // lots of reports use 3 16-bit numbers stored in bytes 4 through 9
+   int16_t data1 = (int16_t)shtpData[5 + 5] << 8 | shtpData[5 + 4];
+	int16_t data2 = (int16_t)shtpData[5 + 7] << 8 | shtpData[5 + 6];
+	int16_t data3 = (int16_t)shtpData[5 + 9] << 8 | shtpData[5 + 8];
 
-	uint16_t data1 = (uint16_t)shtpData[5 + 5] << 8 | shtpData[5 + 4];
-	uint16_t data2 = (uint16_t)shtpData[5 + 7] << 8 | shtpData[5 + 6];
-	uint16_t data3 = (uint16_t)shtpData[5 + 9] << 8 | shtpData[5 + 8];
+	//uint8_t status = shtpData[5 + 2] & 0x03; //Get status bits comment as not used yet
 	
    uint16_t data4; 
    uint16_t data5; 
@@ -560,14 +610,20 @@ uint8_t bno_read_event(struct State_t * state_p) {
 		data5 = (uint16_t)shtpData[18] << 8 | shtpData[17];
 	}
 
+   // Now look for report id type
    // Accel (with gravity vector) m/s^2
 	if (shtpData[5] == 0x01)
 	{
 		state_p->acc[0] = (double)data1 * qp8;
-		state_p->acc[0] = (double)data2 * qp8;
-		state_p->acc[0] = (double)data3 * qp8;
+		state_p->acc[1] = (double)data2 * qp8;
+		state_p->acc[2] = (double)data3 * qp8;
+
+      if ( dsp_flg ) {
+        	printf("%7.4f %7.4f %7.4f\n",state_p->acc[0], state_p->acc[1], state_p->acc[2]);
+      }
+
 	}
-	else if ( shtpData[5] == 0x02 || shtpData[5] == 0x08 || shtpData[5] == 0x28 || shtpData[5] == 0x29 )
+	else if ( shtpData[5] == 0x05 || shtpData[5] == 0x08 || shtpData[5] == 0x28 || shtpData[5] == 0x29 )
 	{
 		state_p->quat[1] = (double)data1 * qp14;
 	   state_p->quat[2] = (double)data2 * qp14;
@@ -582,7 +638,20 @@ uint8_t bno_read_event(struct State_t * state_p) {
       printf("unhandled report id\n");
    }
 
+	
    return 1; 
+}
+
+// -----------------------------------------
+// Display functions. 
+void disp_rpy_omega(struct State_t * state_p){
+	printf("%7.4f %7.4f %7.4f : ",state_p->angle[0], state_p->angle[1], state_p->angle[2]);
+	printf("%7.4f %7.4f %7.4f",state_p->omega[0], state_p->omega[1], state_p->omega[2]);
+	printf("\n");
+}
+
+void disp_three_floats(struct State_t * state_p){
+	printf("%7.4f %7.4f %7.4f\n",state_p->angle[0], state_p->angle[1], state_p->angle[2]);
 }
 
 //-------------------------------------------
@@ -639,7 +708,12 @@ uint16_t read_i2c_dev(uint8_t *data,uint16_t data_len){
    int rtn = read(i2c_port.fd, data, data_len);
 
    if( rtn != data_len ) {
-      printf("Error: Read failed on %d tried to send %d only %d bytes sent %s\n", i2c_port.fd,data_len,rtn,strerror(errno));
+      printf("Error: Read failed on %s requested %d only %d bytes sent %s\n", i2c_port.dev,data_len,rtn,strerror(errno));
+      bno_close();
+      usleep(10000);
+      bno_open();
+      usleep(10000);
+      
       return(-1);
    }
 
