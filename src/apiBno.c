@@ -413,6 +413,29 @@ uint8_t bno_errors() {
 }
 
 /* ------------------------------------------------------------ *
+ *  
+ * 
+ * ------------------------------------------------------------ */
+uint8_t bno_get_prod_id();
+uint8_t bno_get_prod_id() {
+   shtpData[0] = 0xF9;
+   bno_sendPacket(CHANNEL_CONTROL, 2); 
+   usleep(10000);
+
+   uint16_t rtn = bno_readPacket();
+   if ( rtn <= 0 ) { 
+      printf("Set Feature failed %s\n",strerror(errno)); 
+		bno_close();
+      exit(1);
+	}
+
+   for (int i = 0; i <= 12; i++ ) {
+      printf("0X%02X\n",shtpData[i]);
+   }
+   return(1);
+}
+
+/* ------------------------------------------------------------ *
  * Set Feature (ie get report at certain rate) 
  * SH-2 reference manual 6.5.4
  * ------------------------------------------------------------ */

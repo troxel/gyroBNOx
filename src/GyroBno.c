@@ -128,6 +128,11 @@ int main(int argc, char **argv) {
 		return(-1); 
 	}
 
+	bno_get_prod_id();
+   exit(EXIT_SUCCESS);
+
+
+   // Default is to run report and received data continuously 
 	// -------------------------------------------------------------------------------------
 	// Modify below as desired... 
 	// Report ID 0x2A is integrated gyro produces both rotation vector and ang velocity... just what we want 
