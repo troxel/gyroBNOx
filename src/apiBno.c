@@ -80,6 +80,8 @@ uint16_t (*read_data)(uint8_t *,uint16_t);
 extern uint8_t (*bno_open)();
 extern void (*bno_close)();
 
+uint8_t bno_get_prod_id();
+
 // Util functions...
 uint8_t quat2euler(double * qt, double * angles);
 
@@ -416,7 +418,6 @@ uint8_t bno_errors() {
  *  
  * 
  * ------------------------------------------------------------ */
-uint8_t bno_get_prod_id();
 uint8_t bno_get_prod_id() {
    shtpData[0] = 0xF9;
    bno_sendPacket(CHANNEL_CONTROL, 2); 
@@ -429,9 +430,11 @@ uint8_t bno_get_prod_id() {
       exit(1);
    }
 
-   for (int i = 0; i <= 12; i++ ) {
-      printf("0X%02X\n",shtpData[i]);
-   }
+   printf("\nSW Version\t %d.%d\n",shtpData[2],shtpData[3]);
+   printf("SW Part No.\t %ul\n", (shtpData[7] << 24) | (shtpData[6] << 16) | (shtpData[5] << 8) | shtpData[4]);
+   printf("Build No.\t %ul\n", (shtpData[11] << 24) | (shtpData[10] << 16) | (shtpData[9] << 8) | shtpData[8]);
+	printf("SW Patch No.\t %d\n\n", (shtpData[13] << 8) | shtpData[12]);
+
    return(1);
 }
 
