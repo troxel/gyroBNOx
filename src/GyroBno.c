@@ -42,31 +42,54 @@ int main(int argc, char **argv) {
    char dev_i2c[MAX_INPUT_LENGTH];
 	dev_i2c[0] = '\0'; 
 
-   unsigned int feature_set = 0x2A;
-   int interval = 0;
-   int opt;
+   uint8_t fs_lst[] = {0x2A,0x01};
+   uint8_t fs_in = 0x2A;
+   uint16_t interval = 0;
+   int16_t opt;
 
-    while ((opt = getopt(argc, argv, "d:f:i:")) != -1) {
-		  printf("opt is %C",opt);
+      while ((opt = getopt(argc, argv, "d:f:i:")) != -1) {
+		printf("opt is %hhu : %s\n",opt, optarg);
         switch (opt) {
             case 'd':
-					// Protect buffer
-				  	if (strlen(optarg) > MAX_INPUT_LENGTH) {
+				
+				// Protect buffer
+				if (strlen(optarg) > MAX_INPUT_LENGTH) {
                   fprintf(stderr, "Error: Arg too long. Max length is %d characters.\n", MAX_INPUT_LENGTH);
-                  return EXIT_FAILURE;
-               }
-					strncpy(dev_i2c,optarg, sizeof(dev_i2c));
+                  exit(EXIT_FAILURE);
+                }
+				
+				strncpy(dev_i2c,optarg, sizeof(dev_i2c));
 
                break;
 
             case 'f':
-                sscanf(optarg, "%x", &feature_set);
-                break;
+
+				if ( sscanf(optarg, "%hhx", &fs_in) != 1) {
+					printf("Error! feature set out of range <<%s>>\n", optarg);
+					exit(EXIT_FAILURE);
+				}
+
+				uint8_t fnd = 0;
+    			for (int i = 0; i < sizeof(fs_lst) / sizeof(fs_lst[0]); i++) {
+        			if (fs_lst[i] == fs_in) {
+						fnd = 1; 
+            			break; // Exiting loop
+					}	
+        		}
+
+				if ( !fnd ) {
+					fprintf(stderr, "Non-support feature set requested\n\n");
+					exit(EXIT_FAILURE);
+				}
+			
+				break; // Exit case
+            
             case 'i':
                 interval = atoi(optarg);
                 break;
             default:
-                fprintf(stderr, "\nUsage: %s [-d i2c-device] [-f feature-set-hex] [-i report interval]\n", argv[0]);
+				printf(">>>>> %C - %s\n\n",opt,optarg);
+                fprintf(stderr, "\nUsage: %s [-d i2c-device] [-f feature-set-hex] [-i report interval]\n\n", argv[0]);
                 fprintf(stderr, "-d : Must be either bcm2835 or existinbg i2c device in /dev\n");
                 fprintf(stderr, "-f : Feature set hex number of ST-2 manual\n");
                 fprintf(stderr, "-i : Interval for printing results to console.\n\n");
@@ -75,13 +98,13 @@ int main(int argc, char **argv) {
     }
 
 	 if ( dev_i2c[0] == '\0' ) {
-		   fprintf(stderr, "I2C Device -d is required\n");
-			fprintf(stderr,"Example %s -d /dev/i2c-1 or %s -d bcm2835\n\n",argv[0],argv[0]);
-         exit(EXIT_FAILURE);
+		fprintf(stderr, "I2C Device -d is required\n");
+		fprintf(stderr,"Example %s -d /dev/i2c-1 or %s -d bcm2835\n\n",argv[0],argv[0]);
+        exit(EXIT_FAILURE);
 	 }
 
     printf("I2C Device: %s\n", dev_i2c);
-    printf("Feature Set: 0x%X\n", feature_set);
+    printf("Feature Set: 0x%X\n", fs_in);
     printf("Report Interval: %d\n", interval);
 
 
@@ -111,8 +134,9 @@ int main(int argc, char **argv) {
 	// 5000 -> 200 hz
 	// 2500 -> 400
 	// 1250 -> 800
+	bno_set_feature(fs_in,1250);
 	//bno_set_feature(0x2A,1250);
-	bno_set_feature(0x01,1250);
+	//bno_set_feature(0x01,1250);
 	//bno_set_feature(0x05,5000);
 	//bno_set_feature(0x06,1250);
 
