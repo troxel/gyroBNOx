@@ -49,7 +49,7 @@ extern uint8_t verbose;
 
 // Open details for i2c
 struct Gyro_Open_t i2c_port;
-	   
+      
 struct timespec t1={0,0}, t2={0,0};
 long diff_ns(struct timespec *, struct timespec *);
 
@@ -117,23 +117,23 @@ void bno_init(char *dev_i2c) {
 uint8_t open_i2c_dev() {
 
    // i2c_port.dev is set in bno_init() 
- 	i2c_port.addr = I2CADDR;
-	i2c_port.xspeed = I2CXSPEED;
+    i2c_port.addr = I2CADDR;
+   i2c_port.xspeed = I2CXSPEED;
  
-	if(( i2c_port.fd = open(i2c_port.dev, O_RDWR )) < 0) {
-		printf("Error failed to open I2C bus [%s] %s\n", i2c_port.dev, strerror(errno) );
-		exit(1);
-	}
+   if(( i2c_port.fd = open(i2c_port.dev, O_RDWR )) < 0) {
+      printf("Error failed to open I2C bus [%s] %s\n", i2c_port.dev, strerror(errno) );
+      exit(1);
+   }
     if(verbose >= 1) printf("Debug: I2C bus device: %d [%s]\n", i2c_port.fd, i2c_port.dev);
    
- 	if (ioctl(i2c_port.fd, I2C_SLAVE, i2c_port.addr) < 0) {
-		printf("Error! with I2C address [0x%02X] %s\n", i2c_port.addr, strerror(errno) );
-		exit(1);
-	}
+    if (ioctl(i2c_port.fd, I2C_SLAVE, i2c_port.addr) < 0) {
+      printf("Error! with I2C address [0x%02X] %s\n", i2c_port.addr, strerror(errno) );
+      exit(1);
+   }
 
-	usleep(I2CDELAY);
+   usleep(I2CDELAY);
 
-	return i2c_port.fd; 
+   return i2c_port.fd; 
 }
 
 // -----------------------------------------------------
@@ -143,8 +143,8 @@ uint8_t open_i2c_bcm() {
    // Must compile with -l bcm2835
 
    i2c_port.dev = I2CPORT;   // set of now as it signals i2c usage... 
-	i2c_port.addr = I2CADDR;
-	i2c_port.xspeed = I2CXSPEED;
+   i2c_port.addr = I2CADDR;
+   i2c_port.xspeed = I2CXSPEED;
  
    //Initialize the library
    if (!bcm2835_init())
@@ -167,7 +167,7 @@ uint8_t open_i2c_bcm() {
    if(verbose >= 1) printf("Debug: I2C bus address: %02X\n", i2c_port.addr);
 
    return(1);
-	
+   
 }
 
 // ------------------------------------------------------------
@@ -218,7 +218,7 @@ uint16_t bno_readPacket(void) {
    uint8_t subtransfer = 0;   // if not all data is read in one go,
    
    clock_gettime(CLOCK_MONOTONIC, &t1);
-	//t1.tv_sec = t2.tv_sec; t1.tv_nsec = t2.tv_nsec;
+   //t1.tv_sec = t2.tv_sec; t1.tv_nsec = t2.tv_nsec;
    // 1st Read to get the 4-byte SHTP header with the cargo size
    int cnt = 1;
    int cnt_err = 0;
@@ -269,7 +269,7 @@ uint16_t bno_readPacket(void) {
    }
 
    //clock_gettime(CLOCK_MONOTONIC, &t2);
-	//long diff = diff_ns(&t1,&t2); 
+   //long diff = diff_ns(&t1,&t2); 
    //printf("\ntime diff => %ld\n",diff);
 
    // From the header bytes calculate the number of data bytes for the entire packet
@@ -425,9 +425,9 @@ uint8_t bno_get_prod_id() {
    uint16_t rtn = bno_readPacket();
    if ( rtn <= 0 ) { 
       printf("Set Feature failed %s\n",strerror(errno)); 
-		bno_close();
+      bno_close();
       exit(1);
-	}
+   }
 
    for (int i = 0; i <= 12; i++ ) {
       printf("0X%02X\n",shtpData[i]);
@@ -457,9 +457,9 @@ uint8_t bno_set_feature(uint8_t r_id,int period_usec) {
    uint16_t rtn = bno_readPacket();
    if ( rtn <= 0 ) { 
       printf("Set Feature failed %s\n",strerror(errno)); 
-		bno_close();
+      bno_close();
       exit(1);
-	}
+   }
 
    return(1);
 
@@ -513,7 +513,7 @@ uint8_t bno_read_event(struct State_t * state_p, uint8_t dsp_flg) {
    // This report is identifed if the channel in the header is set to 0x05
    // See 1.3.1 SHTP in BNO085 Data Sheet
 
-	// The gyro-integrated input report is an odd ball require special handling. 
+   // The gyro-integrated input report is an odd ball require special handling. 
    // They are identified via the special gyro channel and do no include the 
    // usual ID, time stampe and status fields.
 
@@ -549,13 +549,13 @@ uint8_t bno_read_event(struct State_t * state_p, uint8_t dsp_flg) {
            
       // Give expected results... -----------------------------------------------
       state_p->quat[1] = (double)(int16_t)(shtpData[1] << 8 | shtpData[0]) * qp14;
-	   state_p->quat[2] = (double)(int16_t)(shtpData[3] << 8 | shtpData[2]) * qp14;
-		state_p->quat[3] = (double)(int16_t)(shtpData[5] << 8 | shtpData[4]) * qp14;
-		state_p->quat[0] = (double)(int16_t)(shtpData[7] << 8 | shtpData[6]) * qp14;
+      state_p->quat[2] = (double)(int16_t)(shtpData[3] << 8 | shtpData[2]) * qp14;
+      state_p->quat[3] = (double)(int16_t)(shtpData[5] << 8 | shtpData[4]) * qp14;
+      state_p->quat[0] = (double)(int16_t)(shtpData[7] << 8 | shtpData[6]) * qp14;
       
-    	state_p->omega[0] = (double)(int16_t)(shtpData[9] << 8  | shtpData[8]) * qp10 * rad2deg;
-		state_p->omega[1] = (double)(int16_t)(shtpData[11] << 8 | shtpData[10]) * qp10 * rad2deg;
-		state_p->omega[2] = (double)(int16_t)(shtpData[13] << 8 | shtpData[12]) * qp10 * rad2deg;
+       state_p->omega[0] = (double)(int16_t)(shtpData[9] << 8  | shtpData[8]) * qp10 * rad2deg;
+      state_p->omega[1] = (double)(int16_t)(shtpData[11] << 8 | shtpData[10]) * qp10 * rad2deg;
+      state_p->omega[2] = (double)(int16_t)(shtpData[13] << 8 | shtpData[12]) * qp10 * rad2deg;
 
       state_p->fs = 0x2A;
       //--------------------------------------------------------------------------------------
@@ -563,15 +563,15 @@ uint8_t bno_read_event(struct State_t * state_p, uint8_t dsp_flg) {
 
       // As given in BNO080.cpp doesn't work. --------------
       /*
-	   uint16_t rawFastGyroX, rawFastGyroY, rawFastGyroZ;
+      uint16_t rawFastGyroX, rawFastGyroY, rawFastGyroZ;
 
-		rawFastGyroX = (uint16_t)shtpData[9] << 8 | shtpData[8];
-		rawFastGyroY = (uint16_t)shtpData[11] << 8 | shtpData[10];
-		rawFastGyroZ = (uint16_t)shtpData[13] << 8 | shtpData[12];
+      rawFastGyroX = (uint16_t)shtpData[9] << 8 | shtpData[8];
+      rawFastGyroY = (uint16_t)shtpData[11] << 8 | shtpData[10];
+      rawFastGyroZ = (uint16_t)shtpData[13] << 8 | shtpData[12];
 
       state_p->omega[0] = (double)( rawFastGyroX ) * qp10 * rad2deg;
-		state_p->omega[1] = (double)( rawFastGyroY ) * qp10 * rad2deg;
-		state_p->omega[2] = (double)( rawFastGyroZ ) * qp10 * rad2deg;
+      state_p->omega[1] = (double)( rawFastGyroY ) * qp10 * rad2deg;
+      state_p->omega[2] = (double)( rawFastGyroZ ) * qp10 * rad2deg;
       */
       // printf("%7.3f \n",state_p->omega[2]);
 
@@ -610,48 +610,48 @@ uint8_t bno_read_event(struct State_t * state_p, uint8_t dsp_flg) {
    //shtpData[SIZE + 12:13]: Accuracy estimate
 
    int16_t dataLength = ((uint16_t)shtpHeader[1] << 8 | shtpHeader[0]);
-	dataLength &= ~(1 << 15); //Clear the MSbit. This bit indicates if this package is a continuation of the last.
+   dataLength &= ~(1 << 15); //Clear the MSbit. This bit indicates if this package is a continuation of the last.
 
-	state_p->ts = ((uint32_t)shtpData[4] << 24) | ((uint32_t)shtpData[3] << 16) | ((uint32_t)shtpData[2] << 8) | ((uint32_t)shtpData[1] );
+   state_p->ts = ((uint32_t)shtpData[4] << 24) | ((uint32_t)shtpData[3] << 16) | ((uint32_t)shtpData[2] << 8) | ((uint32_t)shtpData[1] );
 
    // lots of reports use 3 16-bit numbers stored in bytes 4 through 9
    int16_t data1 = (int16_t)shtpData[5 + 5] << 8 | shtpData[5 + 4];
-	int16_t data2 = (int16_t)shtpData[5 + 7] << 8 | shtpData[5 + 6];
-	int16_t data3 = (int16_t)shtpData[5 + 9] << 8 | shtpData[5 + 8];
+   int16_t data2 = (int16_t)shtpData[5 + 7] << 8 | shtpData[5 + 6];
+   int16_t data3 = (int16_t)shtpData[5 + 9] << 8 | shtpData[5 + 8];
 
-	//uint8_t status = shtpData[5 + 2] & 0x03; //Get status bits comment as not used yet
-	
+   //uint8_t status = shtpData[5 + 2] & 0x03; //Get status bits comment as not used yet
+   
    uint16_t data4; 
    uint16_t data5; 
-	if (dataLength - 5 > 9)
-	{
-		data4 = (uint16_t)shtpData[16] << 8 | shtpData[15];
-	}
+   if (dataLength - 5 > 9)
+   {
+      data4 = (uint16_t)shtpData[16] << 8 | shtpData[15];
+   }
 
-	if (dataLength - 5 > 11)
-	{
-		data5 = (uint16_t)shtpData[18] << 8 | shtpData[17];
-	}
+   if (dataLength - 5 > 11)
+   {
+      data5 = (uint16_t)shtpData[18] << 8 | shtpData[17];
+   }
 
    // Now look for report id type
    // Accel (with gravity vector) m/s^2
-	if (shtpData[5] == 0x01)
-	{
-		state_p->acc[0] = (double)data1 * qp8;
-		state_p->acc[1] = (double)data2 * qp8;
-		state_p->acc[2] = (double)data3 * qp8;
+   if (shtpData[5] == 0x01)
+   {
+      state_p->acc[0] = (double)data1 * qp8;
+      state_p->acc[1] = (double)data2 * qp8;
+      state_p->acc[2] = (double)data3 * qp8;
 
       if ( dsp_flg ) {
-        	printf("%7.4f %7.4f %7.4f\n",state_p->acc[0], state_p->acc[1], state_p->acc[2]);
+           printf("%7.4f %7.4f %7.4f\n",state_p->acc[0], state_p->acc[1], state_p->acc[2]);
       }
 
-	}
-	else if ( shtpData[5] == 0x05 || shtpData[5] == 0x08 || shtpData[5] == 0x28 || shtpData[5] == 0x29 )
-	{
-		state_p->quat[1] = (double)data1 * qp14;
-	   state_p->quat[2] = (double)data2 * qp14;
-		state_p->quat[3] = (double)data3 * qp14;
-		state_p->quat[0] = (double)data4 * qp14;
+   }
+   else if ( shtpData[5] == 0x05 || shtpData[5] == 0x08 || shtpData[5] == 0x28 || shtpData[5] == 0x29 )
+   {
+      state_p->quat[1] = (double)data1 * qp14;
+      state_p->quat[2] = (double)data2 * qp14;
+      state_p->quat[3] = (double)data3 * qp14;
+      state_p->quat[0] = (double)data4 * qp14;
 
       quat2euler( state_p->quat, state_p->angle );
    }
@@ -661,20 +661,20 @@ uint8_t bno_read_event(struct State_t * state_p, uint8_t dsp_flg) {
       printf("unhandled report id\n");
    }
 
-	
+   
    return 1; 
 }
 
 // -----------------------------------------
 // Display functions. 
 void disp_rpy_omega(struct State_t * state_p){
-	printf("%7.4f %7.4f %7.4f : ",state_p->angle[0], state_p->angle[1], state_p->angle[2]);
-	printf("%7.4f %7.4f %7.4f",state_p->omega[0], state_p->omega[1], state_p->omega[2]);
-	printf("\n");
+   printf("%7.4f %7.4f %7.4f : ",state_p->angle[0], state_p->angle[1], state_p->angle[2]);
+   printf("%7.4f %7.4f %7.4f",state_p->omega[0], state_p->omega[1], state_p->omega[2]);
+   printf("\n");
 }
 
 void disp_three_floats(struct State_t * state_p){
-	printf("%7.4f %7.4f %7.4f\n",state_p->angle[0], state_p->angle[1], state_p->angle[2]);
+   printf("%7.4f %7.4f %7.4f\n",state_p->angle[0], state_p->angle[1], state_p->angle[2]);
 }
 
 //-------------------------------------------
@@ -781,14 +781,14 @@ uint8_t quat2euler(double * qt, double * angles) {
 // --- Timing utility function ----
 long diff_ns(struct timespec * t1, struct timespec * t2)
 {
-	// t1 -> prev
-	// t2 -> now
-	long tdiff; 
-	if ( t1->tv_sec == t2->tv_sec ){
-		tdiff = t2->tv_nsec - t1->tv_nsec; 
-	} 
-	else {
-		tdiff = (t2->tv_sec - t1->tv_sec) * 1000000000UL + (t2->tv_nsec - t1->tv_nsec); 
-	}
-	return(tdiff);
+   // t1 -> prev
+   // t2 -> now
+   long tdiff; 
+   if ( t1->tv_sec == t2->tv_sec ){
+      tdiff = t2->tv_nsec - t1->tv_nsec; 
+   } 
+   else {
+      tdiff = (t2->tv_sec - t1->tv_sec) * 1000000000UL + (t2->tv_nsec - t1->tv_nsec); 
+   }
+   return(tdiff);
 }	
