@@ -1,25 +1,63 @@
-# gyroBNOx
-A C linux interface to the Ceva BNO08x FSM300 FSM305 motion IMU devices. 
+# gyroBNOx on Raspberry PI
 
-# gyroWitMotion
-A C based console program to setup and read data from a CEVA Hillcrest Bosch IMU Gyro devices. Specifically this has been tested with the BNO085 and FSM305 but I suspect will work with other similar Ceva/Hillcrest Motion devices. This program is targed to run on the Raspberry Pi and tested with a model 4. This program has been written to support I2C interface using the BCM2835 library, the /dev/i2c-1 device, and the /devi2c-3 (gpio interface). There is a hardware abstraction layer in the apiBNO.c file so if you wanted add SPI or UART it should be pretty straight forward - just generated specific open,send,read,close functions and align the function pointers in a section of code towards the top as:
+A C linux interface to the Ceva BNO08x FSM300 FSM305 motion IMU devices to run on a Raspberry PI or similar processor. 
+
+# gyroBno0x program. 
+
+A C based console program to setup and read data from a CEVA Hillcrest Bosch IMU Gyro devices. iSpecifically this has been tested with the BNO085 and FSM305 but I suspect will work with other similar Ceva/Hillcrest Motion devices. This program is targed to run on the Raspberry Pi and tested with a model 4. This program has been written to support I2C interface using the BCM2835 library, the /dev/i2c-1 device, and the /devi2c-3 (gpio interface). There is a hardware abstraction layer in the apiBNO.c file so if you wanted add SPI or UART it should be pretty straight forward - just generated specific open,send,read,close functions and align the function pointers in a section of code towards the top as:
 
   send_data = send_i2c_bcm;  
   read_data = read_i2c_bcm;  
   bno_open = open_i2c_bcm;  
   bno_close = close_i2c_bcm;  
 
-Note at the time I am only requesting the report id 0x2A also known as “inputGyroRv” which is a fast rate combined rotation vector and gyro angular velocity. More could easily be added but this is not general purpose code. I might add more as I need them but I am on a time crunch. 
-
 Also my project requirements are to post the data to a shared memory location /dev/shm/gyro0. You can comment out this part of the code if you like. 
 
+# Getting started. 
+
+You will need to download the BCM2835 library which can be found here
+
+https://www.airspayce.com/mikem/bcm2835/
+
+Install the bcm2835 by configure and make. If you don't want to use this library you can comment out the includes in the dot h files. This library works well with older Pi's and older OS. 
+
+Next step is issue a 
+```
+  > make 
+```
+In the project directory. 
+
+# I2C Issues. 
+
+There has been significant issue with I2C compliance of the Bno chips and the I2C bus. In older PI's it is advisable to use the BCM2835 library. I have test with a Raspberry PI 4 and 64-bit bookworm PI OS and the BCM2835 library no longer works. But the I2C device does.  You can enabling the I2C bus with the following lines in the config.txt 
+
+*dtparam=i2c_arm=on
+dtparam=qi2c_arm_baudrate=400000*
+
+On reboot this should build the /dev/i2c-1 device and then you should be able to go 
+
+```
+  >./bin/GyroBno.exe -d /dev/i2c-1
+```
+If that doesn't work (and it didn't in some cases) you can try the gpio device. Add the following line in the config.txt 
+
+*dtoverlay=i2c-gpio,i2c_gpio_sda=2,i2c_gpio_scl=3,i2c_gpio_delay_us=2,bus=3*
+
+This will create a device /dev/i2c-3 and you should be able to 
+
+```
+  >./bin/GyroBno.exe -d /dev/i2c-3
+```
+To get it work
+
 # Synopsis
+```
+  > ./bin/GyroBno.exe [-d i2c-device] [-f feature-set-hex] [-p get-product-id]
 
-> ./bin/gyroBNOx
-> ./bin/GyroBno.exe [-d i2c-device] [-f feature-set-hex] 
--d : Must be either bcm2835 or existing i2c device in /dev
--f : Feature set hex number of ST-2 manual.
-
+  > -d : Must be either bcm2835 or existing i2c device in /dev
+  > -f : Feature set hex number of ST-2 manual. It defaults to feature set 0x2A.
+  > -p : retrieved product id (ie firmware version of Bno08x chip 
+```
 
 # Validation
 
